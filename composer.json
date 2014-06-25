@@ -1,10 +1,9 @@
 {
-    "name": "DarkAiR/yii2-mailtank-client-extension",
+    "name": "darkair/yii2-mailtank-client-extension",
     "description": "Yii2 extension for Mailtank Client",
     "keywords": ["yii", "yii2", "mail", "email", "extension", "mailtank", "client"],
     "homepage": "https://github.com/DarkAiR/yii2-mailtank-client-extension",
     "type": "yii2-extension",
-    "license": "MIT",
     "authors": [
         {
             "name": "Dmitry DarkAiR Romanov",
@@ -12,6 +11,6 @@
         }
     ],
     "require": {
-        
+        "yiisoft/yii2": "*"
     }
 }
