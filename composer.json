@@ -1,8 +1,8 @@
 {
     "name": "darkair/yii2-mailtank-client-extension",
     "description": "Yii2 extension for Mailtank Client",
+    "keywords": ["yii2", "extension", "mailtank"],
     "type": "yii2-extension",
-    "minimum-stability": "dev",
     "authors": [
         {
             "name": "Dmitry DarkAiR Romanov",
@@ -12,5 +12,10 @@
     "require": {
         "yiisoft/yii2": "dev-master",
         "darkair/yii2-mailtank-client": "dev-master"
+    }
+    "autoload": {
+        "psr-4": {
+            "darkair\\": ""
+        }
     }
 }
