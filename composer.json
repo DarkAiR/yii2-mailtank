@@ -10,7 +10,7 @@
         }
     ],
     "require": {
-        "yiisoft/yii2": "*",
-        "darkair/yii2-mailtank-client": "*"
+        "yiisoft/yii2": "dev-master",
+        "darkair/yii2-mailtank-client": "dev-master"
     }
 }
