@@ -10,12 +10,16 @@
         }
     ],
     "require": {
-        "yiisoft/yii2": "dev-master",
-        "darkair/yii2-mailtank-client": "master"
+        "php": ">=5.4.0",
+        "darkair/yii2-mailtank-client": "dev-master",
+        "darkair/yii2-sentry-log": "dev-master"
+    },
+    "require-dev": {
+        "yiisoft/yii2": "dev-master"
     },
     "autoload": {
         "psr-4": {
-            "mailtank\\": ""
+            "mailtank\\": "src/",
         }
     }
 }
