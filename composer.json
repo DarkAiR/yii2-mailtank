@@ -1,8 +1,10 @@
 {
     "name": "darkair/yii2-mailtank-client-extension",
-    "description": "Yii2 extension for Mailtank Client",
-    "keywords": ["yii2", "extension", "mailtank"],
     "type": "yii2-extension",
+    "description": "Yii2 extension for Mailtank Client",
+    "keywords": ["yii2", "extension", "mailtank", "client"],
+    "version": "0.1.0",
+    "license": "BSD",
     "authors": [
         {
             "name": "Dmitry DarkAiR Romanov",

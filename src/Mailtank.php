@@ -1,6 +1,6 @@
 <?php
 
-namespace mailtank\helpers;
+namespace mailtank;
 
 class Mailtank
 {
