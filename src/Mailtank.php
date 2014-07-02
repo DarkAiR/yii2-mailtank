@@ -2,10 +2,32 @@
 
 namespace mailtank;
 
-class Mailtank
+use Yii;
+use yii\base\InvalidConfigException;
+use mailtank\helpers;
+
+class Mailtank extends \yii\base\Object
 {
+    public $host = '';
+    public $token = '';
+    public $templatesPath = '';
+
+    public function init()
+    {
+        parent::init();
+        if (empty($this->host) || empty($this->token))
+            throw new InvalidConfigException("Parameters 'host' and 'token', couldn't be an empty");
+        if (empty($this->templatesPath))
+            throw new InvalidConfigException("You have to fill parameters 'templatesPath' for mail templates");
+    }
+
+    public function createSubscribeTemplates()
+    {
+        SubscribeTemplatesHelper::run([]);
+    }
+
     /**
-     * Рассылка через мейлтанк
+     * Subscribe via mailtank
      * @param string  $template
      * @param string  $subject
      * @param array   $fields
