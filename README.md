@@ -37,5 +37,5 @@ Add target class in your project config:
 Then use:
 
 ```
-Yii::$app->mailtank
+Yii::$app->mailtank->send
 ```
