@@ -1,5 +1,5 @@
 {
-    "name": "darkair/yii2-mailtank-client-extension",
+    "name": "darkair/yii2-mailtank",
     "type": "yii2-extension",
     "description": "Yii2 extension for Mailtank Client",
     "keywords": ["yii2", "extension", "mailtank", "client"],
