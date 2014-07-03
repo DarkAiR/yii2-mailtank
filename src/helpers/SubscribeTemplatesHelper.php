@@ -4,6 +4,7 @@ namespace mailtank\helpers;
 
 use Yii;
 use yii\helpers\FileHelper;
+use yii\helpers\Console;
 use yii\console\Request;
 
 class SubscribeTemplatesHelper
@@ -11,10 +12,8 @@ class SubscribeTemplatesHelper
     /**
      * Create subscribe templates for mailtank by path to templates
      */
-    public function createSubscribeTemplates($path)
+    public function createSubscribeTemplates($path, $prefix)
     {
-        return;
-        
         // Find all template files
         $alias = Yii::getAlias($path);
         $files = FileHelper::findFiles($alias);
@@ -45,7 +44,7 @@ class SubscribeTemplatesHelper
         });
         
         foreach ($templates as $templateName => $dummy) {
-            $this->createTemplate($templateName);
+            $this->createTemplate($templateName, $prefix);
         }
     }
 
@@ -84,18 +83,10 @@ class SubscribeTemplatesHelper
             'markup' => $html,
         ));
         if ($layout->save()) {
-            ConsoleLog::output("Template <", false);
-            ConsoleLog::setStyle("green");
-            ConsoleLog::output($templateName, false);
-            ConsoleLog::resetStyle();
-            ConsoleLog::output("> is created, id=".$layout->id);
+            Console::output("Template <%g".$templateName."%n> is created, id=".$layout->id);
         } else {
             $err = $layout->getErrors();
-            ConsoleLog::output("Template <", false);
-            ConsoleLog::setStyle("magenta");
-            ConsoleLog::output($templateName, false);
-            ConsoleLog::resetStyle();
-            ConsoleLog::output("> is not created.");
+            Console::output("Template <%m".$templateName."%n> is not created, id=".$layout->id);
             ConsoleLog::addIndent();
             foreach ($err as $k=>$v) {
                 ConsoleLog::error($k, false);

@@ -11,19 +11,28 @@ class Mailtank extends \yii\base\Object
     public $host = '';
     public $token = '';
     public $templatesPath = '';
+    public $templatePrefix = '';
 
     public function init()
     {
         parent::init();
+        
         if (empty($this->host) || empty($this->token))
             throw new InvalidConfigException("Parameters 'host' and 'token', couldn't be an empty");
+        
         if (empty($this->templatesPath))
             throw new InvalidConfigException("You have to fill parameters 'templatesPath' for mail templates");
+
+        if (empty($this->templatePrefix))
+            throw new InvalidConfigException("Parameter <TemplatePrefix> didn't set for mailtank templates");
     }
 
+    /**
+     * Creating subscribe templates
+     */
     public function createSubscribeTemplates()
     {
-        SubscribeTemplatesHelper::createSubscribeTemplates($this->templatesPath);
+        SubscribeTemplatesHelper::createSubscribeTemplates($this->templatesPath, $this->templatePrefix);
     }
 
     /**

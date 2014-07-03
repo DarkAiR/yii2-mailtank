@@ -14,7 +14,8 @@
     "require": {
         "php": ">=5.4.0",
         "darkair/yii2-mailtank-client": "master",
-        "darkair/yii2-sentry-log": "master"
+        "darkair/yii2-sentry-log": "master",
+        "darkair/yii2-console": "master"
     },
     "require-dev": {
         "yiisoft/yii2": "dev-master"
