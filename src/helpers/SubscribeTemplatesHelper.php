@@ -3,25 +3,28 @@
 namespace mailtank\helpers;
 
 use Yii;
+use yii\base\ErrorException;
 use yii\helpers\FileHelper;
-use yii\helpers\Console;
 use yii\console\Request;
+use console\Console;
 
 class SubscribeTemplatesHelper
 {
     /**
      * Create subscribe templates for mailtank by path to templates
+     * @param string $path Path or alias to directory of mailtank templates 
+     * @param string $prefix Unique for project prefix for creating template name
      */
-    public function createSubscribeTemplates($path, $prefix)
+    public static function createSubscribeTemplates($path, $prefix)
     {
         // Find all template files
-        $alias = Yii::getAlias($path);
+        $alias = Yii::getAlias($path) . '/';
         $files = FileHelper::findFiles($alias);
 
         // Splitting filename to parts
         $templates = [];
         foreach ($files as $f) {
-            $reg = '#(?<path>'.$alias.')/(?<name>.+)\.(?<ext>html|txt)$#';
+            $reg = '#(?<path>'.$alias.')(?<name>.+)\.(?<ext>html|txt)$#';
             $r = preg_match($reg, $f, $matches);
             if ($r) {
                 $name = $matches['name'];
@@ -33,113 +36,42 @@ class SubscribeTemplatesHelper
         // Check for html and txt version
         $templates = array_filter($templates, function($value) use (&$templates) {
             if (!isset($value['txt'])) {
-                echo "template '".key($templates)."' doesn't have .txt version".PHP_EOL;
+                Console::error("Template '".key($templates)."' doesn't have .txt version");
                 return false;
             }
             if (!isset($value['html'])) {
-                echo "template '".key($templates)."' doesn't have .html version".PHP_EOL;
+                Console::error("Template '".key($templates)."' doesn't have .html version");
                 return false;
             }
             return true;
         });
         
         foreach ($templates as $templateName => $dummy) {
-            $this->createTemplate($templateName, $prefix);
+            self::createTemplate($templateName, $alias, $prefix);
         }
     }
 
     /**
-     * Create base template
-     * @param string $templateName
-     * @return string|false
+     * Create template on mailtank
+     * @param string $templateName name of template
+     * @param string $basePath path to root directory of mailtank templates
+     * @param string $prefix Unique for project prefix for creating template name
      */
-    private function createBaseTemplate($templateName)
+    private function createTemplate($templateName, $basePath, $prefix)
     {
-        $html = $this->renderTemplate($templateName.'.html');
-        $html = $this->checkTemplate($templateName.'.html', $html);
-        if ($html === false)
-            return false;
+        $html = self::renderTemplate($templateName.'.html', $basePath);
+        $textPlain = self::renderTemplate($templateName.'.txt', $basePath);
 
-        // Creating unique template ID from domain and template name
-        $id = MailHelper::createLayoutId($templateName);
-        
-        try {
-            $layout = new MailtankBaseLayout();
-            $layout->setAttributes(
-                array(
-                    'id' => $id,
-                )
-            );
-            $layout->delete();
-        } catch( Exception $e ) {
-            // Do nothing
-        }
-
-        $layout = new MailtankBaseLayout();
-        $layout->setAttributes(
-          array(
-            'id' => $id,
-            'name' => $id,
-            'markup' => $html,
-        ));
-        if ($layout->save()) {
-            Console::output("Template <%g".$templateName."%n> is created, id=".$layout->id);
-        } else {
-            $err = $layout->getErrors();
-            Console::output("Template <%m".$templateName."%n> is not created, id=".$layout->id);
-            ConsoleLog::addIndent();
-            foreach ($err as $k=>$v) {
-                ConsoleLog::error($k, false);
-                ConsoleLog::error(' : ', false);
-                ConsoleLog::error($v);
-            }
-            ConsoleLog::removeIndent();
-            return false;
-        }
-        return $id;
-    }
-
-    private function createTemplate($templateName, $baseId = false)
-    {
-        $html = $this->renderTemplate($templateName.'.html');
-        $textPlain = $this->renderTemplate($templateName.'.txt');
-
-        // Закомментирован, т.к. https://github.com/mediasite/gpor/issues/2775
-        // Пока не изменим workflow нам emogrifier будет только вредить
-
-        // Вставляем стили inline
-        /*if (preg_match('/<style.*?>(.*?)<\/style>/usix', $html, $matches)) {
-            require_once(LIB_PATH. DS. 'emogrifier'. DS .'emogrifier.php');
-
-            $html = preg_replace('/<style.*?>(.*?)<\/style>/usix','', $html);
-
-            $encoding = mb_detect_encoding($html);
-            $html = mb_convert_encoding($html, 'HTML-ENTITIES', $encoding);
-            $xmldoc = new DOMDocument;
-            $xmldoc->encoding = $encoding;
-            $xmldoc->strictErrorChecking = false;
-            $xmldoc->formatOutput = true;
-            @$xmldoc->loadHTML($html);
-            $xmldoc->normalizeDocument();
-            $html = $xmldoc->saveHTML();
-
-            $parse = new Emogrifier($html, $matches[1]);
-            $html = $parse->emogrify();
-
-            // Выправляем получившийся код, т.к. теперь он содержит всякие %20
-            $html = urldecode($html);
-        }*/
-
-        // Проверяем ошибки в шаблонах
-        $html = $this->checkTemplate($templateName.'.html', $html);
+        // Check for template errors
+        $html = self::checkTemplate($templateName.'.html', $html);
         if ($html === false)
             return;
-        $textPlain = $this->checkTemplate($templateName.'.txt', $textPlain);
+        $textPlain = self::checkTemplate($templateName.'.txt', $textPlain);
         if ($textPlain === false)
             return;
 
-        // Создаем уникальный ID шаблона из домена и имени шаблона
-        $id = MailHelper::createLayoutId( $templateName );
+        // Create unique mailtank ID from domain and template name
+        $id = self::createLayoutId($templateName, $prefix);
 
         try {
             $layout = new MailtankLayout();
@@ -166,53 +98,35 @@ class SubscribeTemplatesHelper
 
         $layout->setAttributes($attr);
         if ($layout->save()) {
-            ConsoleLog::output("Template <", false);
-            ConsoleLog::setStyle("green");
-            ConsoleLog::output($templateName, false);
-            ConsoleLog::resetStyle();
-            ConsoleLog::output("> is created, id=".$layout->id);
+            Console::output( Console::renderColorisedString("Template <%g{$templateName}%n> was create, id=".$layout->id) );
         } else {
             $err = $layout->getErrors();
-            ConsoleLog::output("Template <", false);
-            ConsoleLog::setStyle("magenta");
-            ConsoleLog::output($templateName, false);
-            ConsoleLog::resetStyle();
-            ConsoleLog::output("> is not created.");
-            ConsoleLog::addIndent();
+            Console::output( Console::renderColorisedString("Template <%m{$templateName}%n> wasn't create") );
+            Console::addIndent();
             foreach ($err as $k=>$v) {
-                ConsoleLog::error($k, false);
-                ConsoleLog::error(' : ', false);
-                ConsoleLog::error($v);
+                Console::error($k.' : '.$v);
             }
-            ConsoleLog::removeIndent();
+            Console::removeIndent();
         }
-    }
-
-    public function getOptionHelp()
-    {
-        return array(
-            "Create subscribe templates.",
-            "",
-        );
     }
 
     /**
      * Check template
      */
-    private function checkTemplate($templateName, $text)
+    private static function checkTemplate($templateName, $text)
     {
-        // NOTE: Замена должна происходить до preg_match_all, чтобы в поиск ($matches) попали уже новые фильтры
+        // NOTE: Replace have to do before preg_match_all, then for matching gone new filters
         //
-        // 1. Обрабатываем разрешенные фильтры
+        // 1. Replace twig filters to the allowed mailtank filters
         $text = preg_replace('/\|raw(\s|\||\)|\})/', '|safe$1', $text);
 
-        // 2. Если ваще фильтров нет, то выходим сразу
+        // 2. If anything filters didn't find, then quit
         if (!preg_match_all('/\|\w*/', $text, $matches, PREG_PATTERN_ORDER | PREG_OFFSET_CAPTURE))
             return $text;
 
         $findError = false;
         foreach ($matches[0] as $match) {
-            // Пропускаем разрешенные фильтры
+            // Skip the allowed mailtank filters
             if (in_array($match[0], array('|safe', '|length', '|capitalize')))
                 continue;
 
@@ -229,12 +143,11 @@ class SubscribeTemplatesHelper
                     ? $match[1] + 32
                     : strlen($text)-1;
             }
-            echo PHP_EOL.'<'.$templateName.'> find filter: '.$match[0].PHP_EOL.''.trim(substr($text, $start, $end-$start)).PHP_EOL;
+            Console::warning('<'.$templateName.'> find not allowed filter: '.$match[0]);
+            Console::annotation(trim(substr($text, $start, $end-$start)));
         }
         if (!$findError)
             return $text;
-
-        echo PHP_EOL;
 
         return false;
     }
@@ -242,29 +155,26 @@ class SubscribeTemplatesHelper
     /**
      * Render mail template
      */
-    private function renderTemplate($filename, $absolutePath = false)
+    private static function renderTemplate($filename, $basePath)
     {
-        $viewfile = './extensions/mailer/views/mailtankMessages/'.$filename;
-        $file = $absolutePath ? $viewfile : Yii::app()->getBasePath().'/'.$viewfile;
-        $content = file_get_contents($file);
+        $content = file_get_contents($basePath . $filename);
 
         // Находим наследование
         $res = preg_match_all('/\{%\s*extends\s*(?s)(?>\'|\")(.*?)(?>\'|\")(?-s)\s*%\}/', $content, $matchesExtends);
         if ($res === FALSE)
-            throw new Exception('Regular expression error');
+            throw new ErrorException('Regular expression error');
 
         // Если шаблон унаследован, вставляем все его блоки в родительский шаблон
         if ($res !== 0) {
             // Вырезаем все блоки
             $res = preg_match_all('/(?s)\{%\s*block\s+(\S+)\s*%\}(.*?)\{%\s*endblock\s*%\}(?-s)/', $content, $matchesBlocks);
             if ($res === FALSE)
-                throw new Exception('Regular expression error');
+                throw new ErrorException('Regular expression error');
 
             $blocks = array_combine($matchesBlocks[1], $matchesBlocks[2]);
 
             // Подставляем блоки в базовый шаблон
-            $baseViewfile = './extensions/mailer/views/mailtankMessages/'.$matchesExtends[1][0];
-            $baseFile = $absolutePath ? $baseViewfile : Yii::app()->getBasePath().'/'.$baseViewfile;
+            $baseFile = $basePath . $matchesExtends[1][0];
             $baseContent = file_get_contents($baseFile);
 
             foreach ($blocks as $key=>$block) {
@@ -281,14 +191,9 @@ class SubscribeTemplatesHelper
     /**
      * Creating ID to template for mailtank
      */
-    private static function createLayoutId($templateName)
+    private static function createLayoutId($templateName, $prefix)
     {
-        $headers = Yii::$app->request->getHeaders();
-        if ($headers->hasProperty('host')) {
-            var_dump($headers->host);
-        }
-
-        $id = preg_replace("/(\/|\.)/u", '_', str_replace("\\", "/", Yii::app()->params['siteDomain']))
+        $id = preg_replace("/(\/|\.)/u", '_', str_replace("\\", "/", $prefix))
             . '_'
             . preg_replace("/(\/|\.)/u", '_', str_replace("\\", "/", $templateName));
 
