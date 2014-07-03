@@ -1,96 +1,56 @@
 <?php
 
-namespace mailtank
+namespace mailtank\helpers;
+
+use Yii;
+use yii\helpers\FileHelper;
+use yii\console\Request;
 
 class SubscribeTemplatesHelper
 {
-    public function run($args)
+    /**
+     * Create subscribe templates for mailtank by path to templates
+     */
+    public function createSubscribeTemplates($path)
     {
-        die('asdaskdjakdjaksjdajdalskjdaslk akldjlasjdklajdja');
-        // Создаем базовый шаблон
-        //$baseId = $this->createBaseTemplate('base');
-        //if ($baseId === false)
-        //    return;
+        return;
+        
+        // Find all template files
+        $alias = Yii::getAlias($path);
+        $files = FileHelper::findFiles($alias);
 
-        // Создаем основные шаблоны
-        $templates = array(
-            'news/newsSubscribe',
-            'news/commentComplaint',
-            'news/massMediaSend',
-            'news/redSubscribe',
+        // Splitting filename to parts
+        $templates = [];
+        foreach ($files as $f) {
+            $reg = '#(?<path>'.$alias.')/(?<name>.+)\.(?<ext>html|txt)$#';
+            $r = preg_match($reg, $f, $matches);
+            if ($r) {
+                $name = $matches['name'];
+                $ext = $matches['ext'];
+                $templates[$name][$ext] = 1;
+            }
+        }
 
-            'activity/sendActivity',
-
-            'lostNews/new',
-            'lostNews/notRegular',
-            'lostNews/active',
-            'lostNews/core',
-
-            'bank/creditOrder',
-            'bank/draftNotification',
-            'bank/creditOrderApprove',
-            'bank/creditOrderFizDeclined',
-            'bank/creditOrderUrAccepted',
-            'bank/creditOrderUrDeclined',
-            'bank/banksCreditOrderFiz',
-            'bank/banksCreditOrderUr',
-
-            'ban/banNotification',
-
-            'comment/commentAnswer',
-            'comment/removedByModerator_toAuthor',
-            'comment/removedByModerator_toReplyedAuthor',
-            'comment/removedByModerator_toComplainedUser',
-
-            'informer/default',
-
-            'hotels/booking',
-
-            'job/common',
-            'job/serviceEnds',
-            'job/serviceEndsSoon',
-            'job/tariffEnds',
-            'job/tariffEndsSoon',
-            'job/vacancyEnds',
-            'job/vacancyEndsSoon',
-            'job/exclusiveEnds',
-            'job/exclusiveEndsSoon',
-            'job/informer',
-            'job/clientChangeEmail',
-            'job/clientChangePassword',
-            'job/clientForgotPassword',
-            'job/clientRestorePasswordOk',
-            'job/noticeOfUserResponse',
-
-            'advert/orderRequest',
-            'advert/quickSubscribe',
-            'advert/mngSubscribe',
-
-            'qa/answerComplaint',
-            'qa/questionComplaint',
-            'qa/questionNotify',
-            'qa/questionHideNotify',
-            'qa/questionDeleteNotify',
-            'qa/newAnswer',
-
-            'afisha/movieCommentComplaint',
-            'afisha/placeCommentComplaint',
-            'afisha/eventCommentComplaint',
-
-            'challenge/profileAccept',
-            'challenge/profileAcceptSimple',
-            'challenge/profileDecline',
-
-            'oldSite/empty',
-        );
-        foreach ($templates as $templateName) {
-            //$this->createTemplate($templateName, $baseId);
+        // Check for html and txt version
+        $templates = array_filter($templates, function($value) use (&$templates) {
+            if (!isset($value['txt'])) {
+                echo "template '".key($templates)."' doesn't have .txt version".PHP_EOL;
+                return false;
+            }
+            if (!isset($value['html'])) {
+                echo "template '".key($templates)."' doesn't have .html version".PHP_EOL;
+                return false;
+            }
+            return true;
+        });
+        
+        foreach ($templates as $templateName => $dummy) {
             $this->createTemplate($templateName);
         }
     }
 
     /**
-     * Создаем базовый шаблон
+     * Create base template
      * @param string $templateName
      * @return string|false
      */
@@ -101,7 +61,7 @@ class SubscribeTemplatesHelper
         if ($html === false)
             return false;
 
-        // Создаем уникальный ID шаблона из домена и имени шаблона
+        // Creating unique template ID from domain and template name
         $id = MailHelper::createLayoutId($templateName);
         
         try {
@@ -324,5 +284,23 @@ class SubscribeTemplatesHelper
         }
 
         return $content;
+    }
+
+
+    /**
+     * Creating ID to template for mailtank
+     */
+    private static function createLayoutId($templateName)
+    {
+        $headers = Yii::$app->request->getHeaders();
+        if ($headers->hasProperty('host')) {
+            var_dump($headers->host);
+        }
+
+        $id = preg_replace("/(\/|\.)/u", '_', str_replace("\\", "/", Yii::app()->params['siteDomain']))
+            . '_'
+            . preg_replace("/(\/|\.)/u", '_', str_replace("\\", "/", $templateName));
+
+        return $id;
     }
 }

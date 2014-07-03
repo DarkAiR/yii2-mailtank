@@ -4,7 +4,7 @@ namespace mailtank;
 
 use Yii;
 use yii\base\InvalidConfigException;
-use mailtank\helpers;
+use mailtank\helpers\SubscribeTemplatesHelper;
 
 class Mailtank extends \yii\base\Object
 {
@@ -23,7 +23,7 @@ class Mailtank extends \yii\base\Object
 
     public function createSubscribeTemplates()
     {
-        SubscribeTemplatesHelper::run([]);
+        SubscribeTemplatesHelper::createSubscribeTemplates($this->templatesPath);
     }
 
     /**
