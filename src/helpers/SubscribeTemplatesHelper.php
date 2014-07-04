@@ -7,6 +7,8 @@ use yii\base\ErrorException;
 use yii\helpers\FileHelper;
 use yii\console\Request;
 use console\Console;
+use mailtank\models\MailtankLayout;
+
 
 class SubscribeTemplatesHelper
 {
