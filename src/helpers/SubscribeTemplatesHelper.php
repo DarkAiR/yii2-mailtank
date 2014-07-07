@@ -7,6 +7,7 @@ use yii\base\ErrorException;
 use yii\helpers\FileHelper;
 use yii\console\Request;
 use console\Console;
+use mailtank\MailtankException;
 use mailtank\models\MailtankLayout;
 
 
@@ -37,14 +38,10 @@ class SubscribeTemplatesHelper
 
         // Check for html and txt version
         $templates = array_filter($templates, function($value) use (&$templates) {
-            if (!isset($value['txt'])) {
-                Console::error("Template '".key($templates)."' doesn't have .txt version");
-                return false;
-            }
-            if (!isset($value['html'])) {
-                Console::error("Template '".key($templates)."' doesn't have .html version");
-                return false;
-            }
+            if (!isset($value['txt']))
+                throw new MailtankException("Template '".key($templates)."' doesn't have .txt version");
+            if (!isset($value['html']))
+                throw new MailtankException("Template '".key($templates)."' doesn't have .html version");
             return true;
         });
 
