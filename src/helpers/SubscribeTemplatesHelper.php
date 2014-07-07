@@ -47,7 +47,12 @@ class SubscribeTemplatesHelper
             }
             return true;
         });
-        
+
+        print_r($templates);
+        $templates = array_diff($templates, Yii::$app->mailtank->excludeTemplates);
+        print_r($templates);
+        die;
+
         foreach ($templates as $templateName => $dummy) {
             self::createTemplate($templateName, $alias, $prefix);
         }
@@ -77,11 +82,9 @@ class SubscribeTemplatesHelper
 
         try {
             $layout = new MailtankLayout();
-            $layout->setAttributes(
-                array(
-                    'id' => $id,
-                )
-            );
+            $layout->setAttributes([
+                'id' => $id,
+            ]);
             $layout->delete();
         } catch( Exception $e ) {
             // Do nothing
@@ -95,9 +98,6 @@ class SubscribeTemplatesHelper
             'markup' => $html,
             'plaintext_markup' => $textPlain,
         );
-        if ($baseId)
-            $attr['base'] = $baseId;
-
         $layout->setAttributes($attr);
         if ($layout->save()) {
             Console::output( Console::renderColorisedString("Template <%g{$templateName}%n> was create, id=".$layout->id) );

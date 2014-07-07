@@ -12,6 +12,7 @@ class Mailtank extends \yii\base\Object
     public $token = '';
     public $templatesPath = '';
     public $templatePrefix = '';
+    public $excludeTemplates = [];
 
     public function init()
     {

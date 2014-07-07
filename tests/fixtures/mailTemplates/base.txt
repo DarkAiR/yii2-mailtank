@@ -1,0 +1,6 @@
+Base text template
+
+{% block content %}
+{% endblock %}
+
+Unsibscribe link: {{unsubscribe_link}}}

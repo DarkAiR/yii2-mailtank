@@ -2,6 +2,4 @@
 return [
     'host' => '',
     'token' => '',
-    'templatePath' => '',
-    'prefix' => '',
 ];

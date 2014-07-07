@@ -10,8 +10,12 @@ return [
             'class' => 'mailtank\Mailtank',
             'host' => $params['host'],
             'token' => $params['token'],
-            'templatesPath' => $params['templatePath'],
-            'templatePrefix' => $params['prefix'],
+            'templatesPath' => __DIR__ . '/fixtures/mailTemplates',
+            'templatePrefix' => 'blablanator_test',
+            'excludeTemplates' => [
+                'base',
+                'subfolder/excludeMail',
+            ],
         ],
     ],
 ];
