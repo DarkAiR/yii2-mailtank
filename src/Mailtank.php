@@ -13,8 +13,6 @@ class Mailtank extends \yii\base\Object
     public $templatesPath = '';
     public $templatePrefix = '';
 
-    private $client = null;
-
     public function init()
     {
         parent::init();
@@ -28,11 +26,13 @@ class Mailtank extends \yii\base\Object
         if (empty($this->templatePrefix))
             throw new InvalidConfigException("Parameter <TemplatePrefix> didn't set for mailtank templates");
 
-        $this->client = Yii::createObject([
-            'class' => 'mailtank\MailtankClient', 
-            'host' => $this->host,
-            'token' => $this->token
-        ]);
+        Yii::$app->components = [
+            'mailtankClient' => [
+                'class' => 'mailtank\MailtankClient', 
+                'host' => $this->host,
+                'token' => $this->token
+            ]
+        ];
     }
 
     /**
