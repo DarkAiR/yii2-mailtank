@@ -30,7 +30,13 @@ Add target class in your project config:
     'mailtank' => [
         'class' => 'mailtank\Mailtank',
         'host' => 'api.mailtank.ru',
-        'token' => '',                  // API access key
+        'token' => '',                          // API access key
+        'templatesPath' => '@app/views/mail',   // Path or alias to folder with mailtank templates without end slash 
+        'templatePrefix' => 'testproject.com',  // Template prefix, unique for project
+        'excludeTemplates' => [                 // Exclude templates like 'base'
+            'baseMail',
+            'subfolder/otherExcludeMail',
+        ],
     ],
 ```
 

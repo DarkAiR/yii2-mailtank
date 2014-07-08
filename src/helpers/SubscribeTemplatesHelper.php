@@ -3,22 +3,28 @@
 namespace mailtank\helpers;
 
 use Yii;
-use yii\base\ErrorException;
 use yii\helpers\FileHelper;
 use yii\console\Request;
 use console\Console;
+use yii\base\ErrorException;
+use mailtank\MailtankException;
 use mailtank\models\MailtankLayout;
 
 
 class SubscribeTemplatesHelper
 {
+    static private $useConsoleOut = true;
+
     /**
      * Create subscribe templates for mailtank by path to templates
      * @param string $path Path or alias to directory of mailtank templates 
      * @param string $prefix Unique for project prefix for creating template name
+     * @param boolean $useConsoleOut Use output to console or MailtankException
      */
-    public static function createSubscribeTemplates($path, $prefix)
+    public static function createSubscribeTemplates($path, $prefix, $useConsoleOut = true)
     {
+        self::$useConsoleOut = $useConsoleOut;
+
         // Find all template files
         $alias = Yii::getAlias($path) . '/';
         $files = FileHelper::findFiles($alias);
@@ -35,25 +41,34 @@ class SubscribeTemplatesHelper
             }
         }
 
-        // Check for html and txt version
-        $templates = array_filter($templates, function($value) use (&$templates) {
-            if (!isset($value['txt'])) {
-                Console::error("Template '".key($templates)."' doesn't have .txt version");
-                return false;
-            }
-            if (!isset($value['html'])) {
-                Console::error("Template '".key($templates)."' doesn't have .html version");
-                return false;
-            }
-            return true;
-        });
+        // Exclude some templates
+        foreach (Yii::$app->mailtank->excludeTemplates as $exclTemplate) {
+            if (isset($templates[$exclTemplate]))
+                unset($templates[$exclTemplate]);
+        }
 
-        print_r($templates);
-        $templates = array_diff($templates, Yii::$app->mailtank->excludeTemplates);
-        print_r($templates);
+        // Check for html and txt version
+        $tmpTemplates = [];
+        foreach ($templates as $templateName=>$t) {
+            if (!isset($t['txt'])) {
+                if (!self::$useConsoleOut)
+                    throw new MailtankException("Template '".$templateName."' doesn't have .txt version");
+                Console::error("Template '".$templateName."' doesn't have .txt version");
+                continue;
+            }
+            if (!isset($t['html'])) {
+                if (!self::$useConsoleOut)
+                    throw new MailtankException("Template '".$templateName."' doesn't have .html version");
+                Console::error("Template '".$templateName."' doesn't have .html version");
+                continue;
+            }
+            $tmpTemplates[] = $templateName;
+        }
+
+        print_r($tmpTemplates);
         die;
 
-        foreach ($templates as $templateName => $dummy) {
+        foreach ($tmpTemplates as $templateName) {
             self::createTemplate($templateName, $alias, $prefix);
         }
     }
@@ -86,28 +101,33 @@ class SubscribeTemplatesHelper
                 'id' => $id,
             ]);
             $layout->delete();
-        } catch( Exception $e ) {
+        } catch( \Exception $e ) {
             // Do nothing
         }
 
         $layout = new MailtankLayout();
         $attr = array(
-            'id' => $id,
-            'name' => $id,
-            'subject_markup' => '{{subject}}',
-            'markup' => $html,
-            'plaintext_markup' => $textPlain,
+            'id'                => $id,
+            'name'              => $id,
+            'subject_markup'    => '{{subject}}',
+            'markup'            => $html,
+            'plaintext_markup'  => $textPlain,
         );
         $layout->setAttributes($attr);
         if ($layout->save()) {
-            Console::output( Console::renderColorisedString("Template <%g{$templateName}%n> was create, id=".$layout->id) );
-        } else {
-            $err = $layout->getErrors();
-            Console::output( Console::renderColorisedString("Template <%m{$templateName}%n> wasn't create") );
-            Console::addIndent();
-            foreach ($err as $k=>$v) {
-                Console::error($k.' : '.$v);
+            if (self::$useConsoleOut) {
+                Console::output( Console::renderColoredString("Template <%g{$templateName}%n> was create, id=".$layout->id) );
             }
+        } else {
+            $err = [];
+            foreach ($layout->getErrors() as $k=>$v)
+                $err[] = $k.' : '.$v;
+            if (!self::$useConsoleOut)
+                throw new MailtankException("Template <%m{$templateName}%n> wasn't create".PHP_EOL.implode(PHP_EOL, $err));
+            Console::output( Console::renderColoredString("Template <%m{$templateName}%n> wasn't create") );
+            Console::addIndent();
+            foreach ($err as $v)
+                Console::error($v);
             Console::removeIndent();
         }
     }
@@ -145,6 +165,8 @@ class SubscribeTemplatesHelper
                     ? $match[1] + 32
                     : strlen($text)-1;
             }
+            if (!self::$useConsoleOut)
+                throw new MailtankException('<'.$templateName.'> find not allowed filter: '.$match[0]);
             Console::warning('<'.$templateName.'> find not allowed filter: '.$match[0]);
             Console::annotation(trim(substr($text, $start, $end-$start)));
         }
@@ -193,7 +215,7 @@ class SubscribeTemplatesHelper
     /**
      * Creating ID to template for mailtank
      */
-    private static function createLayoutId($templateName, $prefix)
+    protected static function createLayoutId($templateName, $prefix)
     {
         $id = preg_replace("/(\/|\.)/u", '_', str_replace("\\", "/", $prefix))
             . '_'

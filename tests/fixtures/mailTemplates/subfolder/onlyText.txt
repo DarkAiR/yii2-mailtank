@@ -1,5 +1,0 @@
-{% extends 'base.txt' %}
-
-{% block content %}
-<p>Only TEXT letter</p>
-{% endblock %}
