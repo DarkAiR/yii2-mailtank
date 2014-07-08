@@ -17,5 +17,21 @@ return [
                 'subfolder/excludeMail',
             ],
         ],
+        'db' => [
+            'class' => 'yii\db\Connection',
+            'dsn' => 'mysql:host='.$params['dbHost'].';dbname='.$params['dbName'],
+            'username' => $params['dbUser'],
+            'password' => $params['dbPass'],
+            'charset' => 'utf8',
+        ],
+        'log' => [
+            'targets' => [
+                [
+                    'class' => 'sentry\SentryTarget',
+                    'levels' => ['error', 'warning'],
+                    'dsn' => $params['sentryDsn'],
+                ],
+            ],
+        ],
     ],
 ];

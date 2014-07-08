@@ -4,7 +4,10 @@ namespace mailtank;
 
 use Yii;
 use yii\base\InvalidConfigException;
+use mailtank\MailtankException;
 use mailtank\helpers\SubscribeTemplatesHelper;
+use mailtank\helpers\MailtankHelper;
+use mailtank\models\MailtankMailing;
 
 class Mailtank extends \yii\base\Object
 {
@@ -61,10 +64,10 @@ class Mailtank extends \yii\base\Object
         $subject,
         $fields,
         $tags,
-        $subscribers = array(),
+        $subscribers = [],
         $priority = null,
         $tagsAndReciversUnion = false,
-        $attachments = array())
+        $attachments = [])
     {
         if (empty($template) || !is_string($template))
             return 'Incorrect template';
@@ -87,21 +90,19 @@ class Mailtank extends \yii\base\Object
         $unsubscribeTags = $tags;
 
         // Заполняем необходимые для поля для письма
-        $fields = array_merge($fields, array('subject'=>$subject));
+        $fields = array_merge($fields, ['subject'=>$subject]);
 
         // Для мейлтанка убираем ключи у подписчиков
         $subscribers = array_values($subscribers);
 
         // Убираем из списка подписчиков тех, кто отписался,
         // потому что мейлтанк не умеет рассылать на несуществующие теги
-        $tmpSubscribers = array();
+        $tmpSubscribers = [];
         foreach ($subscribers as $email) {
             // Почта должна быть валидной
-            $email = self::checkEmail($email);
-            if (!$email) {
+            if (!MailtankHelper::checkEmail($email)) {
                 // Отправляем в сентри
-                Yii::import('application.helpers.SentryHelper');
-                SentryHelper::sendError('Невалидный email для отправки в мейлтанк', array('email'=>$email), true);
+                Yii::error(['msg'=>'Невалидный email для отправки в мейлтанк', 'data'=>['email'=>$email]]);
                 continue;
             }
 
@@ -121,7 +122,7 @@ class Mailtank extends \yii\base\Object
 
             // Подписываем только на те теги, от которых пользователь не отписан
             $amountTags = 0;
-            $updateTags = array();
+            $updateTags = [];
             foreach ($tags as $t) {
                 // Если тег есть, то все ок
                 if (in_array($t, $s->tags)) {
@@ -174,7 +175,7 @@ class Mailtank extends \yii\base\Object
         $tags,
         $userId = 0,
         $userName = '',
-        $attachments = array())
+        $attachments = [])
     {
         $tagsAndReciversUnion = false;
         $priority = null;
@@ -184,7 +185,7 @@ class Mailtank extends \yii\base\Object
             return 'No email';
 
         // Почта должна быть валидной
-        $email = MailHelper::checkEmail($email);
+        $email = MailtankHelper::checkEmail($email);
         if (!$email)
             return 'Incorrect email';
 
@@ -205,11 +206,11 @@ class Mailtank extends \yii\base\Object
         $unsubscribeTags = $tags;
 
         // Заполняем необходимые поля для письма
-        $fields = array_merge($fields, array('subject'=>$subject));
+        $fields = array_merge($fields, ['subject'=>$subject]);
 
         $s = MailtankHelper::getSubscriber($email);
         if ($s) {
-            $res = MailtankHelper::updateSubscriber($s, array(), array('userId'=>$userId, 'userName'=>$userName));
+            $res = MailtankHelper::updateSubscriber($s, [], ['userId'=>$userId, 'userName'=>$userName]);
             if (!$res)
                 return 'Error during update subscriber <'.$s->id.'>';
         } else {
@@ -223,7 +224,7 @@ class Mailtank extends \yii\base\Object
 
         // Подписываем только на те теги, от которых пользователь не отписан
         $amountTags = 0;
-        $updateTags = array();
+        $updateTags = [];
         foreach ($tags as $t) {
             // Если тег есть, то все ок
             if (in_array($t, $s->tags)) {
@@ -244,7 +245,7 @@ class Mailtank extends \yii\base\Object
 
         if ($amountTags > 0) {
             // Хотя бы один тег есть, рассылаем по тегу
-            if (!$this->sendToMailtank($template, $fields, $tags, $unsubscribeTags, array($mailtankId), $priority, $tagsAndReciversUnion, $attachments))
+            if (!$this->sendToMailtank($template, $fields, $tags, $unsubscribeTags, [$mailtankId], $priority, $tagsAndReciversUnion, $attachments))
                 return 'Error during sending mail. See sentry for details.';
         }
         return true;
@@ -256,30 +257,22 @@ class Mailtank extends \yii\base\Object
     private function sendToMailtank(
         $template,
         $fields,
-        $tags = array(),
-        $unsubscribeTags = array(),
-        $subscribers = array(),
+        $tags = [],
+        $unsubscribeTags = [],
+        $subscribers = [],
         $priority = null,
         $tagsAndReciversUnion = false,
-        $attachments = array())
+        $attachments = [])
     {
         // NOTE: Т.к. метод приватный и все необходимые проверки сделаны,
         //       предполагаем, что все параметры правильные
 
-        Yii::app()->getComponent('mailtank');
-        Yii::import('mailtank.models.*');
-        Yii::import('ext.mailer.helpers.*');
-        Yii::import('ext.mailer.models.*');
+        $fields = MailtankHelper::convertToString($fields);
 
-        // Добавляем дополнительные данные
-        $fields['site'] = MailHelper::getAppArray();
-        $fields['menu'] = $this->getMenu();
-        $fields = MailHelper::convertToString($fields);
-
-        $attributes = array(
-            'layout_id' => MailHelper::createLayoutId($template),
+        $attributes = [
+            'layout_id' => MailtankHelper::createLayoutId($template, $this->templatePrefix),
             'context' => $fields
-        );
+        ];
         if (is_array($attachments) && !empty($attachments)) {
             $attributes['attachments'] = $attachments;
         }
@@ -307,77 +300,19 @@ class Mailtank extends \yii\base\Object
                 case 'ENQUEUED':
                     return true;
             }
-            throw new Exception(MailHelper::implodeErrors('; ', $mailing->getErrors()));
+            throw new MailtankException(MailtankHelper::implodeErrors('; ', $mailing->getErrors()));
         }
-        catch (Exception $e) {
+        catch (MailtankException $e) {
             // NOTE: Данный код нужен только для того, чтобы отслеживать недоступность сервиса
             //       При реальной ошибке мы ее не обнаружим, т.к. на этом уровне
             //       нельзя различить недоступность сервиса и ошибку мейлтанка, поэтому Sentry нам в помощь
 
             // Отправляем в сентри
-            Yii::import('application.helpers.SentryHelper');
-            SentryHelper::sendError('Ошибка отправки сообщения в mailtank', array_merge(array('exceptionMsg'=>$e->getMessage()), $mailing->getErrors()));
-
-            // Отправляем в очередь
-            $queue = new MailtankQueue();
-            $queueAttributes = array(
-                'created'   => time(),
-                'template'  => $template,
-                'fields'    => $fields,
-                'retries'   => 0,
-                'priority'  => $priority ? $priority : MailtankQueue::PRIORITY_MEDIUM,
-                'lasttry'   => time(),
-                'error'     => $e->getMessage(),
-            );
-
-            if ($tags)
-                $queueAttributes['tags'] = $tags;
-            if ($subscribers)
-                $queueAttributes['subscribers'] = $subscribers;
-
-            $queue->setAttributes($queueAttributes);
-            $queue->save();
-
-            // Возвращаем false, чтобы хоть как-то определить, что произошла ошибка
-            return false;
+            Yii::error([
+                'msg' => 'Ошибка отправки сообщения в mailtank',
+                'data' => array_merge(['exceptionMsg'=>$e->getMessage()], $mailing->getErrors())
+            ]);
+            throw $e;
         }
-    }
-
-    /**
-     * Получить меню
-     * @return array Список главных пунктов меню
-     */
-    private function getMenu()
-    {
-        $menu = Yii::app()->cache->get('mail_menu');
-        if (!$menu) {
-            $menuTmp = SiteMenuHelper::getMenu(false, false, true);
-            $menuTmp = array_slice($menuTmp, 0, 7);
-               
-            $menu = array_map(function($v) {
-                return array(
-                    'label' => $v['label'],
-                    'url' => $v['url']
-                );
-            }, $menuTmp);
-            Yii::app()->cache->set('mail_menu', $menu, 60 * 60);
-        }
-        return $menu;
-    }
-
-    /**
-     * Checking for correct email and return it
-     * @param  string $string email address
-     * @return boolean|string
-     */
-    public static function checkEmail($string)
-    {
-        // no support for named mailboxes i.e. "Bob <bob@example.com>"
-        // that needs more percent encoding to be done
-        if ($string == '')
-            return false;
-        $string = trim($string);
-        $result = preg_match('/^[a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/i', $string);
-        return $result ? $string : false;
     }
 }

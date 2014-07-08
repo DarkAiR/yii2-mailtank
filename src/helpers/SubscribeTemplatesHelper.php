@@ -8,6 +8,7 @@ use yii\console\Request;
 use console\Console;
 use yii\base\ErrorException;
 use mailtank\MailtankException;
+use mailtank\helpers\MailtankHelper;
 use mailtank\models\MailtankLayout;
 
 
@@ -65,9 +66,6 @@ class SubscribeTemplatesHelper
             $tmpTemplates[] = $templateName;
         }
 
-        print_r($tmpTemplates);
-        die;
-
         foreach ($tmpTemplates as $templateName) {
             self::createTemplate($templateName, $alias, $prefix);
         }
@@ -93,7 +91,7 @@ class SubscribeTemplatesHelper
             return;
 
         // Create unique mailtank ID from domain and template name
-        $id = self::createLayoutId($templateName, $prefix);
+        $id = static::createLayoutId($templateName, $prefix);
 
         try {
             $layout = new MailtankLayout();
@@ -106,13 +104,13 @@ class SubscribeTemplatesHelper
         }
 
         $layout = new MailtankLayout();
-        $attr = array(
+        $attr = [
             'id'                => $id,
             'name'              => $id,
             'subject_markup'    => '{{subject}}',
             'markup'            => $html,
             'plaintext_markup'  => $textPlain,
-        );
+        ];
         $layout->setAttributes($attr);
         if ($layout->save()) {
             if (self::$useConsoleOut) {
@@ -149,7 +147,7 @@ class SubscribeTemplatesHelper
         $findError = false;
         foreach ($matches[0] as $match) {
             // Skip the allowed mailtank filters
-            if (in_array($match[0], array('|safe', '|length', '|capitalize')))
+            if (in_array($match[0], ['|safe', '|length', '|capitalize']))
                 continue;
 
             $findError = true;
@@ -217,10 +215,6 @@ class SubscribeTemplatesHelper
      */
     protected static function createLayoutId($templateName, $prefix)
     {
-        $id = preg_replace("/(\/|\.)/u", '_', str_replace("\\", "/", $prefix))
-            . '_'
-            . preg_replace("/(\/|\.)/u", '_', str_replace("\\", "/", $templateName));
-
-        return $id;
+        return MailtankHelper::createLayoutId($templateName, $prefix);
     }
 }
