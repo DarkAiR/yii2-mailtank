@@ -5,6 +5,8 @@ Yii2 Mailtank (mailtank.ru) extension
 
 ## Installation
 
+### Install package
+
 The preferred way to install this extension is through [composer](http://getcomposer.org/download/).
 
 Either run
@@ -20,6 +22,12 @@ or add
 ```
 
 to the ```require``` section of your `composer.json` file.
+
+### Migration
+
+Will be automatically copied migrations into your 'migration' directory.
+Then you have to run ```migrate``` command for creating DB tables.
+
 
 ## Usage
 
