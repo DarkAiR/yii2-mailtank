@@ -48,6 +48,14 @@ class Mailtank extends \yii\base\Object
     }
 
     /**
+     * Sync mailtank subscribers with local
+     */
+    public function syncFromMailtank($isSync = false)
+    {
+        MailtankHelper::syncFromMailtank($isSync);
+    }
+
+    /**
      * Subscribe via mailtank
      * @param string  $template
      * @param string  $subject

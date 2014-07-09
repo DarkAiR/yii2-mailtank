@@ -2,9 +2,11 @@
 
 namespace mailtank\helpers;
 
+use Yii;
 use mailtank\MailtankException;
 use mailtank\models\Mailtank2Email;
 use mailtank\models\MailtankSubscriber;
+use console\Console;
 
 class MailtankHelper
 {
@@ -185,7 +187,7 @@ class MailtankHelper
      * Синхронизация подписчиков с мейлтанком
      * @param $isSync boolean false - только сравнить, true - синхронизировать
      */
-    /*public static function syncFromMailtank($isSync = false)
+    public static function syncFromMailtank($isSync = false)
     {
         $subscriberCount = 0;
         try {
@@ -200,32 +202,38 @@ class MailtankHelper
                     $mailtankId = $subscriber['id'];
                     $email = $subscriber['email'];
 
-                    $mailtank2email = Mailtank2Email::model()->findByAttributes(array('email' => $email));
+                    $mailtank2email = Mailtank2Email::find()
+                        ->where(['email' => $email])
+                        ->asArray()
+                        ->one();
                     if (!$mailtank2email) {
                         // У нас нет такого email
 
-                        $obj = Mailtank2Email::model()->findByAttributes(array('mailtankId' => $mailtankId));
+                        $obj = Mailtank2Email::find()
+                            ->where(['mailtankId' => $mailtankId])
+                            ->asArray()
+                            ->one();
                         if (!$obj) {
                             // Если у нас нет такого mailtankId, то это новый подписчик
-                            echo "- Subscriber <\033[33m".$email."\033[0m> exists only in the mailtank";
+                            Console::outputColored("- Subscriber <%y".$email."%n> exists only in the mailtank", false);
                             if ($isSync) {
                                 if (self::createInnerSubscriber($email, $mailtankId))
-                                    echo "...\033[32m created\033[0m";
+                                    Console::outputColored("...%g created%n", false);
                                 else
-                                    echo "...\033[31m not created\033[0m";
+                                    Console::outputColored("...%r not created%n", false);
                             }
-                            echo PHP_EOL;
+                            Console::output();
                         } else {
                             // Если у нас есть такой mailtankId, то прописываем ему email с мейлтанка
-                            echo "- Found inner subscriber mailtankId=<\033[33m".$mailtankId."\033[0m> but other email=<\033[33m".$obj['email']."\033[0m>";
+                            Console::outputColored("- Found inner subscriber mailtankId=<%y".$mailtankId."%n> but other email=<%y".$obj['email']."%n>", false);
                             if ($isSync) {
                                 $obj['email'] = $email;
                                 if ($obj->save())
-                                    echo "...\033[32m changed to <".$email.">\033[0m";
+                                    Console::outputColored("...%g changed to <".$email.">%n", false);
                                 else
-                                    echo "...\033[31m not changed\033[0m";
+                                    Console::outputColored("...%r not changed%n", false);
                             }
-                            echo PHP_EOL;
+                            Console::output();
                         }
                     }
                     else {
@@ -235,24 +243,27 @@ class MailtankHelper
                         if ($mailtank2email['mailtankId'] == $mailtankId)
                             continue;
 
-                        echo "- Same emails <\033[33m".$email."\033[0m> belong to different subscribers in the mailtank. Inner id=<\033[33m".$mailtank2email['mailtankId']."\033[0m>, mailtank id=<\033[33m".$mailtankId."\033[0m>".PHP_EOL;
+                        Console::outputColored("- Same emails <%y".$email."%n> belong to different subscribers in the mailtank. Inner id=<%y".$mailtank2email['mailtankId']."%n>, mailtank id=<%y".$mailtankId."%n>");
                         if ($isSync) {
                             // Если не совпадает mailtankId, ищем подписчика по mailtankId с мейлтанка
-                            $obj = Mailtank2Email::model()->findByAttributes(array('mailtankId' => $mailtankId));
+                            $obj = Mailtank2Email::find()
+                                ->where(['mailtankId' => $mailtankId])
+                                ->asArray()
+                                ->one();
                             if ($obj) {
                                 // Если нашли, то удаляем его, а предыдущему меняем mailtankId
                                 if ($obj->delete()) {
-                                    echo "  \033[32mInner subscriber mailtankId <".$mailtankId."> succesfully delete\033[0m".PHP_EOL;
+                                    Console::outputColored("  %gInner subscriber mailtankId <".$mailtankId."> succesfully delete%n");
                                 } else {
-                                    echo "  \033[31mWrong delete mailtank2email with mailtankId=<".$mailtankId.">\033[0m".PHP_EOL;
+                                    Console::outputColored("  %rWrong delete mailtank2email with mailtankId=<".$mailtankId.">%n");
                                     die;
                                 }
                             }
                             $mailtank2email['mailtankId'] = $mailtankId;
                             if ($mailtank2email->save())
-                                echo "  \033[32mFor email <".$email."> changed MailtankId to <".$mailtankId.">\033[0m".PHP_EOL;
+                                Console::outputColored("  %gFor email <".$email."> changed MailtankId to <".$mailtankId.">%n");
                             else
-                                echo "  \033[31mFor email <".$email."> didn't change MailtankId to <".$mailtankId.">\033[0m".PHP_EOL;
+                                Console::outputColored("  %rFor email <".$email."> didn't change MailtankId to <".$mailtankId.">%n");
                         }
                     }
                 }
@@ -267,21 +278,20 @@ class MailtankHelper
                 return true;
             throw $e;
         }
-    }*/
+    }
 
     /**
      * Получить очередную страницу подписчиков
      */
-    /*private static function getPage($page)
+    private static function getPage($page)
     {
-        $data = Yii::app()->mailtank->sendRequest(
+        $data = Yii::$app->mailtankClient->sendRequest(
             '/subscribers/',
-            array('page' => $page),
+            ['page' => $page],
             'get'
         );
-
         return $data;
-    }*/
+    }
 
     /**
      * Создать внутреннюю связку email и mailtankId

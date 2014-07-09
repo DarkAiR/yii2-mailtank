@@ -25,7 +25,7 @@ to the ```require``` section of your `composer.json` file.
 
 ### Migration
 
-Will be automatically copied migrations into your 'migration' directory.
+You have to copy migrations to your 'migrations' directory ```cp vendor/darkair/yii2-mailtank/src/migrations/* migrations```
 Then you have to run ```migrate``` command for creating DB tables.
 
 

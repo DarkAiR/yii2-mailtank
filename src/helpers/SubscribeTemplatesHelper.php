@@ -114,7 +114,7 @@ class SubscribeTemplatesHelper
         $layout->setAttributes($attr);
         if ($layout->save()) {
             if (self::$useConsoleOut) {
-                Console::output( Console::renderColoredString("Template <%g{$templateName}%n> was create, id=".$layout->id) );
+                Console::outputColored("Template <%g{$templateName}%n> was create, id=".$layout->id);
             }
         } else {
             $err = [];
@@ -122,7 +122,7 @@ class SubscribeTemplatesHelper
                 $err[] = $k.' : '.$v;
             if (!self::$useConsoleOut)
                 throw new MailtankException("Template <%m{$templateName}%n> wasn't create".PHP_EOL.implode(PHP_EOL, $err));
-            Console::output( Console::renderColoredString("Template <%m{$templateName}%n> wasn't create") );
+            Console::outputColored("Template <%m{$templateName}%n> wasn't create");
             Console::addIndent();
             foreach ($err as $v)
                 Console::error($v);
